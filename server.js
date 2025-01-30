@@ -8,6 +8,7 @@ const mentorRoutes = require('./routes/mentorRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const assetCategoryRoutes = require('./routes/assetCategoryRoutes');
 const blogCategoryRoutes = require('./routes/blogCategoryRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 dotenv.config();
 connectDB();
@@ -19,8 +20,10 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',  // React frontend
   'http://localhost:3000',  // Another possible origin
+  'https://cms.ilc.limited',  // Production frontend domain
+  'https://explore.ilc.limited',  // Production frontend domain
   'https://ilc.limited',  // Production frontend domain
-  // Add more allowed origins here as needed
+  'https://www.ilc.limited',  // Production frontend domain
 ];
 
 const corsOptions = {
@@ -47,6 +50,7 @@ app.use('/api/mentors', mentorRoutes);  // Mentor-related routes
 app.use('/api/blog-categories', blogCategoryRoutes);  // Blog category routes
 app.use('/api/asset-categories', assetCategoryRoutes);  // Asset category routes
 app.use('/api', blogRoutes);  // Blog routes
+app.use("/api/users", userRoutes);
 
 app.get('/', (req, res) => {
   res.send('Admin Management API is running...');

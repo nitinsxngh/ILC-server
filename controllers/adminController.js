@@ -73,21 +73,23 @@ const loginAdmin = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: admin._id, name: admin.name, email: admin.email },
+      { id: admin._id, name: admin.name, email: admin.email, role: admin.role },  // Include role
       process.env.JWT_SECRET, // Secret key from environment
       { expiresIn: '30d' } // Set token expiration (e.g., 30 days)
     );
 
-    // Send the token in response
+    // Send the token and role in response
     res.json({
       message: 'Login successful',
       token,
+      role: admin.role, // Include the role
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Get all admins
 const getAdmins = async (req, res) => {

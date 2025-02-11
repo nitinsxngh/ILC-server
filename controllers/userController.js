@@ -3,66 +3,101 @@ const User = require('../models/User');
 
 // Register a new user
 const registerUser = async (req, res) => {
-  const { name, email, password, category } = req.body;
+  const { name, email, password, category, phone } = req.body;
 
   try {
-    if (!name || !email || !password || !category) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!name || !category) {
+      return res.status(400).json({ message: "Name and category are required" });
     }
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'Email already registered' });
+    // Validate category
+    const validCategories = ["user", "student", "expert", "professor", "professional", "guest"];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({ message: "Invalid category" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    let lowerCaseEmail = email ? email.toLowerCase() : null;
+
+    // Generate email and password for guests
+    if (category === "guest") {
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required for guests" });
+      }
+      lowerCaseEmail = `${Date.now()}@guest.com`; // Unique guest email
+    } else {
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const userExists = await User.findOne({ email: lowerCaseEmail });
+      if (userExists) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+    }
+
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : "12345678"; // Default guest password
 
     const newUser = new User({
       name,
-      email,
+      email: lowerCaseEmail,
       password: hashedPassword,
-      category
+      category,
+      phone: phone || "N/A", // Store phone for guests
     });
 
     await newUser.save();
-    
-    // Return success response
-    res.status(201).json({ message: 'User registered successfully' });
 
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        category: newUser.category,
+        phone: newUser.phone,
+        createdAt: newUser.createdAt,
+      },
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error registering user:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // Authenticate user (login)
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Find the user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Check if the password matches
+    const lowerCaseEmail = email.toLowerCase(); // Ensure case-insensitive email matching
+    const user = await User.findOne({ email: lowerCaseEmail }).lean();
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Respond with the user info (without password)
     res.status(200).json({
       message: 'Login successful',
       user: {
+        id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        category: user.category,
       },
     });
+
   } catch (error) {
-    console.error(error);
+    console.error("Error during login:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -72,65 +107,103 @@ const getUserById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Find the user by ID
-    const user = await User.findById(id);
+    const user = await User.findById(id).lean();
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Respond with the user info (without password)
     res.status(200).json({
       user: {
+        id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        category: user.category,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching user by ID:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Update user details
-const updateUser = async (req, res) => {
-    const { id, name, age, username, role, college, course, specialisation, expertType, phone, expertise, yearsOfExperience } = req.body;
-  
-    console.log("Received data:", req.body);  // Log the incoming data
-    
-    try {
-      const user = await User.findById(id);
+// Get a user by email
+const getUserByEmail = async (req, res) => {
+  try {
+      const email = req.params.email.toLowerCase();  // Ensure lowercase for consistency
+      console.log("Fetching user with email:", email);
+
+      const user = await User.findOne({ email });
+
       if (!user) {
-        console.log("User not found with ID:", id);
-        return res.status(404).json({ message: 'User not found' });
+          console.log("User not found");
+          return res.status(404).json({ message: 'User not found' });
       }
 
-      // Update fields (only updating the fields passed in the body)
-      user.name = name || user.name;
-      user.age = age || user.age;
-      user.username = username || user.username;
-      user.role = role || user.role;
-      user.college = college || user.college;
-      user.course = course || user.course;
-      user.specialisation = specialisation || user.specialisation;
-      user.expertType = expertType || user.expertType;
-      user.phone = phone || user.phone;
-      user.expertise = expertise || user.expertise;
-      user.yearsOfExperience = yearsOfExperience || user.yearsOfExperience;
-
-      console.log("Updated user data:", user);
-
-      // Save the updated user
-      await user.save();
-      console.log("User saved successfully!");
-
-      // Respond with the updated user object
-      res.status(200).json(user);
-    } catch (error) {
-      console.error("Error updating user:", error);
+      res.status(200).json({ user });
+  } catch (error) {
+      console.error("Error fetching user by email:", error);
       res.status(500).json({ message: 'Server error' });
-    }
+  }
 };
+
+
+// Update user details using email
+const updateUser = async (req, res) => {
+  let { email } = req.params;
+  if (!email) {
+    return res.status(400).json({ message: "Email parameter is required" });
+  }
+
+  email = email.toLowerCase();
+  const updateFields = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Define allowed fields based on user category
+    const allowedFields = ["name"]; // Name is always updatable
+
+    if (user.category === "professor" || user.category === "professional") {
+      allowedFields.push("expertise", "yearsOfExperience");
+    } else if (user.category === "student") {
+      allowedFields.push("college", "course", "specialisation");
+    }
+
+    // Filter the updateFields to only allow the allowed fields
+    const filteredUpdates = {};
+    for (const key of allowedFields) {
+      if (updateFields[key] !== undefined) {
+        filteredUpdates[key] = updateFields[key];
+      }
+    }
+
+    // Update only the allowed fields
+    const updatedUser = await User.findOneAndUpdate(
+      { email },
+      filteredUpdates,
+      { new: true, lean: true }
+    );
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        category: updatedUser.category || "N/A",
+        ...filteredUpdates, // Include only the updated fields
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 
 
 
@@ -138,5 +211,6 @@ module.exports = {
   registerUser,
   loginUser,
   getUserById,
+  getUserByEmail, // Ensure this is exported
   updateUser,
 };

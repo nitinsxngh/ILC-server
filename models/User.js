@@ -17,13 +17,13 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
+    required: [true, "Email is required"], // Ensure email is always required
     match: [/\S+@\S+\.\S+/, 'Email is invalid'],
-    default: 'NA',
   },
   password: {
     type: String,
+    required: [true, "Password is required"], // Ensure password is always required
     minlength: [6, 'Password must be at least 6 characters long'],
-    default: 'NA',
   },
   username: {
     type: String,
@@ -32,9 +32,9 @@ const userSchema = new mongoose.Schema({
     trim: true,
     default: 'NA',
   },
-  role: {
+  category: {
     type: String,
-    enum: ['user', 'admin', 'student', 'expert'],
+    enum: ['user', 'admin', 'student', 'expert', 'professor', 'professional'], 
     default: 'user',
   },
   // Student-specific fields
@@ -51,12 +51,6 @@ const userSchema = new mongoose.Schema({
   specialisation: {
     type: String,
     trim: true,
-    default: 'NA',
-  },
-  // Expert-specific fields
-  expertType: {
-    type: String,
-    enum: ['professor', 'professional', 'NA'], // Now 'NA' is allowed
     default: 'NA',
   },
   phone: {

@@ -1,0 +1,22 @@
+# Ignore node_modules folder
+node_modules/
+
+# Ignore .env files (for sensitive environment variables)
+.env
+
+# Optional: Ignore any build output or temporary files
+build/
+dist/
+
+# Ignore any system files or IDE-specific files (optional but recommended)
+.DS_Store
+.idea/
+.vscode/
+
+# Ignore log files
+*.log
+
+# Ignore compiled files (if applicable)
+*.out
+*.bak
+*.swp
